@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaGamepad, FaPuzzlePiece, FaFont, FaQuestionCircle } from 'react-icons/fa';
+import { FaGamepad, FaPuzzlePiece, FaFont, FaQuestionCircle, FaBrain, FaLightbulb } from 'react-icons/fa';
 import MemoryGame from './MemoryGame';
+import WordScramble from './WordScramble';
+import PatternRecognition from './PatternRecognition';
+import PuzzleGame from './PuzzleGame';
 
 interface GameSelectorProps {
   onGameComplete: (score: number) => void;
@@ -15,12 +18,14 @@ interface Game {
   icon: React.ReactNode;
   benefits: string;
   component: React.ReactNode;
+  category?: string;
 }
 
 const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode }) => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const handleGameComplete = (score: number) => {
     // Apply difficulty multiplier
@@ -42,7 +47,8 @@ const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode 
       description: 'Pair matching cards to test and improve your memory',
       icon: <FaGamepad className="text-3xl text-asu-maroon" />,
       benefits: 'Improves short-term memory, focus, and concentration. Great for reducing stress and anxiety.',
-      component: <MemoryGame onComplete={handleGameComplete} isDarkMode={isDarkMode} />
+      component: <MemoryGame onComplete={handleGameComplete} isDarkMode={isDarkMode} />,
+      category: 'focus'
     },
     {
       id: 'word',
@@ -50,10 +56,8 @@ const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode 
       description: 'Unscramble words related to wellness and mental health',
       icon: <FaFont className="text-3xl text-asu-blue" />,
       benefits: 'Enhances vocabulary, language processing, and cognitive flexibility. Helps maintain verbal skills.',
-      component: <div className="p-6 text-center">
-        <h3 className="text-xl font-bold mb-4">Coming Soon!</h3>
-        <p>This game is currently in development.</p>
-      </div>
+      component: <WordScramble onComplete={handleGameComplete} isDarkMode={isDarkMode} />,
+      category: 'language'
     },
     {
       id: 'pattern',
@@ -61,12 +65,32 @@ const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode 
       description: 'Find patterns in sequences of images and shapes',
       icon: <FaPuzzlePiece className="text-3xl text-asu-orange" />,
       benefits: 'Builds logical thinking, pattern recognition, and problem-solving skills. Improves analytical abilities.',
-      component: <div className="p-6 text-center">
-        <h3 className="text-xl font-bold mb-4">Coming Soon!</h3>
-        <p>This game is currently in development.</p>
-      </div>
+      component: <PatternRecognition onComplete={handleGameComplete} isDarkMode={isDarkMode} />,
+      category: 'analysis'
+    },
+    {
+      id: 'puzzle',
+      name: 'Spatial Puzzle',
+      description: 'Solve puzzles to exercise your spatial reasoning skills',
+      icon: <FaBrain className="text-3xl text-asu-gold" />,
+      benefits: 'Develops spatial awareness, problem-solving, and mental rotation abilities. Strengthens visual processing.',
+      component: <PuzzleGame onComplete={handleGameComplete} isDarkMode={isDarkMode} />,
+      category: 'spatial'
     }
   ];
+
+  // Game categories for filtering
+  const categories = [
+    { id: 'focus', name: 'Focus & Memory', icon: <FaGamepad className="mr-2" /> },
+    { id: 'language', name: 'Language Skills', icon: <FaFont className="mr-2" /> },
+    { id: 'analysis', name: 'Analytical Thinking', icon: <FaPuzzlePiece className="mr-2" /> },
+    { id: 'spatial', name: 'Spatial Reasoning', icon: <FaBrain className="mr-2" /> }
+  ];
+
+  // Filter games by category if one is selected
+  const filteredGames = selectedCategory 
+    ? games.filter(game => game.category === selectedCategory)
+    : games;
 
   if (selectedGame) {
     const game = games.find(g => g.id === selectedGame);
@@ -128,14 +152,45 @@ const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode 
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {games.map((game) => (
+      {/* Category filter buttons */}
+      <div className="mb-6">
+        <h3 className="text-lg font-bold mb-3">Filter by Skill Type</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-4 py-2 rounded-full flex items-center ${
+              selectedCategory === null
+                ? 'bg-asu-maroon text-white'
+                : isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            All Skills
+          </button>
+          {categories.map(category => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`px-4 py-2 rounded-full flex items-center ${
+                selectedCategory === category.id
+                  ? 'bg-asu-maroon text-white'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              {category.icon} {category.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Games grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredGames.map((game) => (
           <motion.div
             key={game.id}
-            className={`p-6 rounded-xl cursor-pointer ${
+            className={`p-6 rounded-xl cursor-pointer shadow-md ${
               isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-asu-cream hover:bg-opacity-80'
             }`}
-            whileHover={{ scale: 1.03 }}
+            whileHover={{ scale: 1.03, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setSelectedGame(game.id)}
           >
@@ -172,6 +227,23 @@ const GameSelector: React.FC<GameSelectorProps> = ({ onGameComplete, isDarkMode 
             )}
           </motion.div>
         ))}
+      </div>
+
+      {/* Benefits section */}
+      <div className="mt-8 p-4 rounded-lg bg-white dark:bg-gray-800 shadow-md">
+        <h3 className="text-lg font-bold text-asu-maroon mb-3 flex items-center">
+          <FaLightbulb className="mr-2 text-asu-gold" /> Brain Training Benefits
+        </h3>
+        <p className="mb-4 text-gray-600 dark:text-gray-300">
+          Regular brain training can improve cognitive function and help manage stress and anxiety. These games are designed to:
+        </p>
+        <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-300">
+          <li>Enhance focus and attention</li>
+          <li>Improve memory retention</li>
+          <li>Develop problem-solving skills</li>
+          <li>Reduce stress through mindful engagement</li>
+          <li>Build cognitive resilience</li>
+        </ul>
       </div>
     </div>
   );

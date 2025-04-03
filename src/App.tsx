@@ -680,9 +680,34 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-asu-cream text-asu-gray'} relative`}>
+    <div 
+      className="min-h-screen relative"
+      style={{
+        color: isDarkMode ? 'white' : '#4a4a4a',
+      }}
+    >
+      {/* Background Image */}
+      <div className="fixed inset-0" style={{ zIndex: 0 }}>
+        <img 
+          src="downtown-night.jpg" 
+          alt="Downtown ASU at night"
+          className="w-full h-full object-cover"
+          style={{ 
+            opacity: 0.95,
+            filter: "brightness(1.5) contrast(1.1)"
+          }}
+        />
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            backgroundColor: isDarkMode ? '#121212' : '#ffffff',
+            opacity: isDarkMode ? 0.25 : 0.1
+          }}
+        ></div>
+      </div>
+      
       {/* ASU Background Elements - Subtle and non-intrusive */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
         {/* Decorative corner elements */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-asu-maroon opacity-10 rounded-br-full transform -translate-x-1/3 -translate-y-1/3"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-asu-gold opacity-10 rounded-tl-full transform translate-x-1/3 translate-y-1/3"></div>
@@ -698,7 +723,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Header with improved styling */}
-      <header className={`p-5 shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white bg-opacity-95'} relative z-10`}>
+      <header className={`p-5 shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white bg-opacity-90'} relative`} style={{ zIndex: 10 }}>
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <div className="relative">
@@ -739,7 +764,7 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Content with improved styling */}
-      <main className="container mx-auto p-4 relative z-10">
+      <main className="container mx-auto p-4 relative" style={{ zIndex: 10 }}>
         {/* Navigation Tabs with enhanced styling */}
         <div className="flex space-x-2 md:space-x-4 mb-8 overflow-x-auto py-3 px-2">
           {[

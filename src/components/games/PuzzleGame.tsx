@@ -8,7 +8,12 @@ interface Tile {
   isBlank: boolean;
 }
 
-const PuzzleGame: React.FC = () => {
+interface PuzzleGameProps {
+  onComplete: (score: number) => void;
+  isDarkMode: boolean;
+}
+
+const PuzzleGame: React.FC<PuzzleGameProps> = ({ onComplete, isDarkMode }) => {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [moves, setMoves] = useState(0);
   const [gameComplete, setGameComplete] = useState(false);
@@ -83,6 +88,14 @@ const PuzzleGame: React.FC = () => {
 
     if (isSolved) {
       setGameComplete(true);
+      // Calculate score based on moves and time
+      const timePenalty = Math.floor(time / 10);
+      const movePenalty = Math.floor(moves / 2);
+      const score = Math.max(100 - timePenalty - movePenalty, 10);
+      // Call onComplete with the final score after a short delay
+      setTimeout(() => {
+        onComplete(score);
+      }, 1500);
     }
   };
 
@@ -107,7 +120,8 @@ const PuzzleGame: React.FC = () => {
           <motion.div
             key={tile.id}
             className={`aspect-square cursor-pointer ${
-              tile.isBlank ? 'bg-asu-gray' : 'bg-asu-maroon text-white'
+              tile.isBlank ? 'bg-asu-gray' : 
+              isDarkMode ? 'bg-asu-maroon text-white' : 'bg-asu-maroon text-white'
             } rounded-lg flex items-center justify-center text-2xl font-bold`}
             onClick={() => handleTileClick(tile)}
             whileHover={{ scale: 1.05 }}
@@ -122,7 +136,9 @@ const PuzzleGame: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 p-4 bg-asu-maroon text-white rounded-lg text-center"
+          className={`mt-4 p-4 ${
+            isDarkMode ? 'bg-gray-700 text-white' : 'bg-asu-maroon text-white'
+          } rounded-lg text-center`}
         >
           <h3 className="text-xl font-bold mb-2">Congratulations!</h3>
           <p>You solved the puzzle in {moves} moves and {formatTime(time)}!</p>
