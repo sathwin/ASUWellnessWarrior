@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 18px; /* Increase base font size */
+  }
+  
+  body {
+    @apply antialiased;
+  }
+  
+  h1 {
+    @apply text-3xl font-bold;
+  }
+  
+  h2 {
+    @apply text-2xl font-bold;
+  }
+  
+  h3 {
+    @apply text-xl font-bold;
+  }
+  
+  p {
+    @apply text-lg;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-asu-maroon text-white rounded-lg hover:bg-asu-gold transition-colors text-lg;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-lg;
+  }
+  
+  .card {
+    @apply p-4 rounded-lg shadow-lg;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-asu-maroon rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-opacity-80;
+} 
