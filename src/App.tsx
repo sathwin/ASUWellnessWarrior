@@ -13,6 +13,7 @@ import WellnessMap from './components/WellnessMap';
 import AchievementsTracker from './components/AchievementsTracker';
 import ResourcesHub from './components/ResourcesHub';
 import MicroInterventions from './components/MicroInterventions';
+import OpenAI from 'openai';
 
 interface Streak {
   current: number;
@@ -37,7 +38,15 @@ interface Achievement {
 }
 
 // Add OpenAI API configuration
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || 'your-api-key-here';
+// Using fallback API key because process.env variables might not work in Create React App without custom setup
+const OPENAI_API_KEY = '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'; // Replace with your actual API key here
+console.log("API Key configured:", OPENAI_API_KEY ? "API key is set" : "API key is missing");
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true // Note: In production, you should use a backend proxy
+});
 
 const App: React.FC = () => {
   // State management
@@ -259,64 +268,80 @@ const App: React.FC = () => {
       setIsLoadingResponse(true);
       
       try {
-        // Here we would integrate with OpenAI API
-        // For now, simulate API response with a timeout
-        setTimeout(async () => {
-          // In a real implementation, you would call the OpenAI API here
-          /* Example OpenAI API call:
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-3.5-turbo',
-              messages: [
-                { role: 'system', content: 'You are an ASU mental health assistant that helps students find mental health resources.' },
-                { role: 'user', content: mentalHealthChatInput }
-              ],
-              max_tokens: 150
-            })
-          });
-          
-          const data = await response.json();
-          const assistantResponse = data.choices[0].message.content;
-          */
-          
-          // Simulate response for now
-          let assistantResponse = "I can help you find ASU mental health resources. What specific support are you looking for?";
-          
-          // Simple keyword matching for demo purposes
-          if (mentalHealthChatInput.toLowerCase().includes('stress') || mentalHealthChatInput.toLowerCase().includes('anxiety')) {
-            assistantResponse = "ASU Counseling Services offers stress and anxiety management workshops and one-on-one counseling. Would you like me to provide contact information?";
-          } else if (mentalHealthChatInput.toLowerCase().includes('depression') || mentalHealthChatInput.toLowerCase().includes('sad')) {
-            assistantResponse = "If you're experiencing symptoms of depression, ASU Counseling Services offers confidential support. You can reach them at (480) 965-6146 or visit their office in the Student Services Building.";
-          } else if (mentalHealthChatInput.toLowerCase().includes('emergency') || mentalHealthChatInput.toLowerCase().includes('crisis')) {
-            assistantResponse = "For immediate help, please call ASU's 24/7 Crisis Line at (480) 965-6146 and press 1. If this is a life-threatening emergency, call 911.";
-          } else if (mentalHealthChatInput.toLowerCase().includes('appointment') || mentalHealthChatInput.toLowerCase().includes('counselor')) {
-            assistantResponse = "To schedule an appointment with an ASU counselor, call (480) 965-6146 or visit the ASU Health Services Patient Portal online.";
+        console.log("Attempting OpenAI API call...");
+        
+        // Create the conversation history for OpenAI - properly typed
+        const conversationHistory: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+          { 
+            role: "system", 
+            content: "You are an ASU mental health assistant that helps students find mental health resources specifically at Arizona State University. Be supportive, empathetic, and highly informative. Provide specific, actionable advice and detailed information about ASU's mental health services and resources.\n\nWhen students ask about managing stress, anxiety, depression, or other mental health concerns, offer comprehensive information about coping strategies and self-help techniques first, then mention relevant ASU resources.\n\nInclude specific details about ASU services such as:\n- Counseling Services (locations, hours, types of therapy offered)\n- Support groups and workshops available\n- TAO (Therapy Assistance Online) self-help modules\n- ASU Wellness resources and programs\n- Live Well @ ASU initiatives\n\nFormat your responses with line breaks between paragraphs for readability. Keep answers under 150 words when possible. If asked what ASU is, explain that ASU stands for Arizona State University, a public research university with multiple campuses in the Phoenix metropolitan area. For emergencies, always recommend the ASU Crisis Line at (480) 965-6146 (press 1) or calling 911."
           }
-          
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            text: assistantResponse,
-            isUser: false,
-            timestamp: new Date()
-          };
-          
-          setMentalHealthChatMessages(prev => [...prev, botMessage]);
-          setIsLoadingResponse(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error communicating with OpenAI API:', error);
-        const errorMessage: Message = {
+        ];
+        
+        // Add previous messages to the conversation history
+        mentalHealthChatMessages.forEach(message => {
+          conversationHistory.push({
+            role: message.isUser ? "user" : "assistant",
+            content: message.text
+          });
+        });
+        
+        // Add the current user message
+        conversationHistory.push({
+          role: "user",
+          content: mentalHealthChatInput
+        });
+        
+        // Call the OpenAI API
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o", 
+          messages: conversationHistory,
+          max_tokens: 300, // Increased token limit for more complete responses
+          temperature: 0.7
+        });
+        
+        console.log("OpenAI API response received:", completion);
+        
+        // Get the assistant's response
+        const assistantResponse = completion.choices[0].message.content || 
+          "I'm sorry, I encountered an issue processing your request. Please try again.";
+        
+        // Create and add the bot message
+        const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: "I'm sorry, I encountered an error processing your request. Please try again later.",
+          text: assistantResponse,
           isUser: false,
           timestamp: new Date()
         };
+        
+        setMentalHealthChatMessages(prev => [...prev, botMessage]);
+      } catch (error) {
+        console.error('Error communicating with OpenAI API:', error);
+        
+        // Specific fallback responses
+        let fallbackResponse;
+        
+        if (mentalHealthChatInput.toLowerCase().includes('asu')) {
+          fallbackResponse = "ASU stands for Arizona State University, a public research university with multiple campuses in the Phoenix metropolitan area.\n\nASU offers various mental health resources to students including counseling services, peer support groups, and crisis support.";
+        } else if (mentalHealthChatInput.toLowerCase().includes('stress') || mentalHealthChatInput.toLowerCase().includes('anxiety')) {
+          fallbackResponse = "Managing stress and anxiety involves both immediate coping strategies and long-term support.\n\nTry deep breathing exercises, progressive muscle relaxation, or mindfulness meditation.\n\nConsider using ASU's TAO (Therapy Assistance Online) self-help modules accessible through your MyASU page. ASU Counseling Services also offers stress management workshops and counseling sessions. You can schedule an appointment by calling (480) 965-6146.";
+        } else if (mentalHealthChatInput.toLowerCase().includes('depression') || mentalHealthChatInput.toLowerCase().includes('sad')) {
+          fallbackResponse = "I'm sorry to hear you're feeling down. Depression is common and treatable.\n\nASU Counseling Services offers individual therapy, group sessions, and can connect you with psychiatrists if needed.\n\nIn the meantime, try to maintain a routine, get some physical activity, and stay connected with supportive people. The ASU Wellness website also has self-help resources on managing depression. Remember, seeking help is a sign of strength.";
+        } else if (mentalHealthChatInput.toLowerCase().includes('emergency') || mentalHealthChatInput.toLowerCase().includes('crisis')) {
+          fallbackResponse = "If you're experiencing a mental health emergency, please call ASU's 24/7 Crisis Line at (480) 965-6146 and press 1. If it's life-threatening, call 911.\n\nASU has crisis counselors available around the clock, and there are walk-in crisis services at all ASU Counseling Services locations during business hours. Your safety is the priority.";
+        } else {
+          fallbackResponse = "ASU offers comprehensive mental health resources including counseling services, peer support groups, wellness coaching, and self-help tools.\n\nThe Counseling Services team includes licensed psychologists, counselors, and social workers specializing in student mental health. They offer both in-person and telehealth options.\n\nFor specific information or to schedule an appointment, you can call (480) 965-6146 or visit the ASU Health Services website.";
+        }
+        
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: fallbackResponse,
+          isUser: false,
+          timestamp: new Date()
+        };
+        
         setMentalHealthChatMessages(prev => [...prev, errorMessage]);
+      } finally {
         setIsLoadingResponse(false);
       }
     }
@@ -329,7 +354,7 @@ const App: React.FC = () => {
           <div className="flex flex-col gap-8">
             {/* Two-column layout with primary components - enhanced styling */}
             <div className="flex flex-col md:flex-row gap-8">
-              <div className="md:w-1/2 p-8 rounded-xl bg-white shadow-lg dark:bg-gray-800 relative overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+              <div className="md:w-1/2 wellness-panel relative overflow-hidden transform transition-all duration-300 hover:shadow-xl">
                 {/* Decorative corner element */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-asu-gold opacity-10 rounded-bl-full"></div>
                 
@@ -350,7 +375,7 @@ const App: React.FC = () => {
                   <MicroInterventions isDarkMode={isDarkMode} />
                 </div>
               </div>
-              <div className="md:w-1/2 p-8 rounded-xl bg-white shadow-lg dark:bg-gray-800 relative overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+              <div className="md:w-1/2 wellness-panel relative overflow-hidden transform transition-all duration-300 hover:shadow-xl">
                 {/* Decorative corner element */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-asu-maroon opacity-10 rounded-bl-full"></div>
                 
@@ -365,7 +390,12 @@ const App: React.FC = () => {
             </div>
             
             {/* Mental Health Assistant with enhanced styling */}
-            <div className="max-w-5xl mx-auto w-full p-8 rounded-xl bg-white shadow-lg dark:bg-gray-800 relative overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+            <div className="max-w-5xl mx-auto w-full p-8 rounded-xl relative overflow-hidden transform transition-all duration-300 hover:shadow-xl" 
+                style={{ 
+                  background: "rgba(255, 255, 255, 0.7)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)"
+                }}>
               {/* Decorative elements for the chat container */}
               <div className="absolute -top-12 -left-12 w-24 h-24 bg-asu-gold opacity-10 rounded-full"></div>
               <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-asu-maroon opacity-10 rounded-full"></div>
@@ -374,29 +404,29 @@ const App: React.FC = () => {
               
               <div className="flex items-center justify-center mb-6">
                 <div className="relative">
-                  <div className="bg-gradient-to-r from-asu-maroon to-asu-gold p-4 rounded-full mr-4 shadow-md">
+                  <div className="bg-asu-maroon p-4 rounded-full mr-4 shadow-md">
                     <FaRobot className="text-white text-3xl" />
                   </div>
                   <motion.div 
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-asu-gold rounded-full border-2 border-white"
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-asu-maroon to-asu-gold">
+                  <h2 className="chat-title">
                     ASU Mental Health Assistant
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Online • Ready to help</p>
+                  <p className="chat-subtitle">Online • Ready to help</p>
                 </div>
               </div>
               
-              <p className="text-center mb-6 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              <p className="text-center mb-6 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto bg-white bg-opacity-70 p-3 rounded-lg shadow-sm">
                 Chat with me about wellness resources and mental health support at ASU. I'm here to help you navigate available services and find the support you need.
               </p>
               
               {/* Chat Messages - enhanced styling */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 mb-6 h-[350px] overflow-y-auto shadow-inner border border-gray-100 dark:border-gray-600 scroll-smooth">
+              <div className="chat-container h-[350px] mb-6 overflow-y-auto scroll-smooth">
                 <div className="space-y-6">
                   {mentalHealthChatMessages.map((message, index) => (
                     <motion.div 
@@ -407,21 +437,17 @@ const App: React.FC = () => {
                       transition={{ delay: 0.1 * (index % 3) }}
                     >
                       {!message.isUser && (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-asu-blue to-asu-maroon flex-shrink-0 mr-3 flex items-center justify-center shadow-md">
-                          <FaRobot className="text-white text-sm" />
+                        <div className="chat-avatar chat-avatar-bot mr-3">
+                          <FaRobot className="text-asu-maroon text-sm" />
                         </div>
                       )}
                       <motion.div 
-                        className={`p-4 rounded-2xl max-w-[80%] shadow-md ${
-                          message.isUser 
-                            ? 'bg-gradient-to-r from-asu-maroon to-asu-gold text-white' 
-                            : 'bg-asu-blue text-white'
-                        }`}
+                        className={message.isUser ? 'chat-bubble-user' : 'chat-bubble-bot'}
                         whileHover={{ scale: 1.02 }}
                       >
                         <p className="text-base">{message.text}</p>
                         <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs opacity-70">
+                          <p className="chat-timestamp">
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                           {message.isUser && (
@@ -433,7 +459,7 @@ const App: React.FC = () => {
                         </div>
                       </motion.div>
                       {message.isUser && (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-asu-gold to-asu-orange flex-shrink-0 ml-3 flex items-center justify-center shadow-md">
+                        <div className="chat-avatar chat-avatar-user ml-3">
                           <FaUser className="text-white text-sm" />
                         </div>
                       )}
@@ -446,23 +472,23 @@ const App: React.FC = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-asu-blue to-asu-maroon flex-shrink-0 mr-3 flex items-center justify-center shadow-md">
-                        <FaRobot className="text-white text-sm" />
+                      <div className="chat-avatar chat-avatar-bot mr-3">
+                        <FaRobot className="text-asu-maroon text-sm" />
                       </div>
-                      <div className="bg-asu-blue text-white p-4 rounded-2xl shadow-md">
+                      <div className="chat-bubble-bot">
                         <div className="flex space-x-2">
                           <motion.div 
-                            className="w-3 h-3 bg-white rounded-full"
+                            className="w-3 h-3 bg-asu-maroon rounded-full"
                             animate={{ y: [0, -6, 0] }}
                             transition={{ repeat: Infinity, duration: 1, delay: 0 }}
                           />
                           <motion.div 
-                            className="w-3 h-3 bg-white rounded-full"
+                            className="w-3 h-3 bg-asu-maroon rounded-full"
                             animate={{ y: [0, -6, 0] }}
                             transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
                           />
                           <motion.div 
-                            className="w-3 h-3 bg-white rounded-full"
+                            className="w-3 h-3 bg-asu-maroon rounded-full"
                             animate={{ y: [0, -6, 0] }}
                             transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
                           />
@@ -476,16 +502,16 @@ const App: React.FC = () => {
               {/* Predetermined Quick Options - enhanced styling */}
               <div className="flex flex-wrap gap-3 justify-center mb-6">
                 {[
-                  { text: "Stress management", query: "How can I manage stress during finals?", icon: "😓" },
-                  { text: "Talk to counselor", query: "I need to talk to a counselor ASAP", icon: "🗣️" },
-                  { text: "Find resources", query: "Where can I find mental health resources on campus?", icon: "🔍" },
-                  { text: "Anxiety support", query: "I'm feeling anxious about my classes", icon: "😰" },
-                  { text: "Depression help", query: "I'm feeling depressed and need help", icon: "😢" }
+                  { text: "Stress management", query: "How can I manage stress during finals?", icon: "😓", className: "quick-option" },
+                  { text: "Talk to counselor", query: "I need to talk to a counselor ASAP", icon: "🗣️", className: "quick-option-alt" },
+                  { text: "Find resources", query: "Where can I find mental health resources on campus?", icon: "🔍", className: "quick-option" },
+                  { text: "Anxiety support", query: "I'm feeling anxious about my classes", icon: "😰", className: "quick-option-alt" },
+                  { text: "Depression help", query: "I'm feeling depressed and need help", icon: "😢", className: "quick-option" }
                 ].map((option, index) => (
                   <motion.button 
                     key={index}
                     onClick={() => setMentalHealthChatInput(option.query)}
-                    className="px-5 py-3 bg-asu-cream text-asu-gray rounded-full hover:bg-asu-gold hover:text-white transition-colors text-sm font-medium shadow-sm border border-transparent hover:border-asu-gold flex items-center"
+                    className={option.className}
                     whileHover={{ scale: 1.05, boxShadow: "0 4px 8px rgba(0,0,0,0.1)" }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -505,9 +531,7 @@ const App: React.FC = () => {
                       onChange={(e) => setMentalHealthChatInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleMentalHealthChat()}
                       placeholder="Ask about mental health support..."
-                      className={`w-full p-4 pl-12 rounded-full border text-base focus:ring-2 focus:ring-asu-gold focus:border-transparent transition-all ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'
-                      }`}
+                      className="chat-input pl-12"
                       disabled={isLoadingResponse}
                     />
                     <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -516,9 +540,7 @@ const App: React.FC = () => {
                   </div>
                   <motion.button
                     onClick={handleMentalHealthChat}
-                    className={`p-4 rounded-full bg-gradient-to-r from-asu-maroon to-asu-gold text-white flex items-center justify-center shadow-md ${
-                      isLoadingResponse ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    className={`send-button ${isLoadingResponse ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={isLoadingResponse}
                     whileHover={{ scale: 1.05, boxShadow: "0 4px 8px rgba(0,0,0,0.1)" }}
                     whileTap={{ scale: 0.95 }}
@@ -534,8 +556,8 @@ const App: React.FC = () => {
                     )}
                   </motion.button>
                 </div>
-                <div className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
-                  Powered by ASU Counseling Services • Privacy Protected • <span className="text-asu-blue cursor-pointer hover:underline">Privacy Policy</span>
+                <div className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400 bg-white bg-opacity-50 p-2 rounded-lg">
+                  Powered by ASU Counseling Services • Privacy Protected • <span className="text-soft-teal cursor-pointer hover:underline">Privacy Policy</span>
                 </div>
               </div>
             </div>
@@ -544,7 +566,7 @@ const App: React.FC = () => {
       case 'games':
         return (
           <div className="space-y-6">
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="content-card">
               <h2 className="text-2xl font-bold mb-4 text-asu-maroon">Brain Games</h2>
               <p className="mb-4 text-gray-600 dark:text-gray-300">Exercise your mind and earn wellness points!</p>
               <div className="bg-asu-maroon text-white p-4 rounded-lg mb-6">
@@ -560,14 +582,14 @@ const App: React.FC = () => {
       case 'map':
         return (
           <div className="space-y-6">
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="content-card">
               <h2 className="text-2xl font-bold mb-4 text-asu-maroon">Campus Wellness Map</h2>
               <p className="mb-4 text-gray-600 dark:text-gray-300">
                 Explore wellness resources and emotional markers across ASU campus
               </p>
               <WellnessMap isDarkMode={isDarkMode} />
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="content-card">
               <MoodHeatMap isDarkMode={isDarkMode} />
             </div>
           </div>
@@ -575,7 +597,7 @@ const App: React.FC = () => {
       case 'progress':
         return (
           <div className="space-y-6">
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="content-card">
               <h2 className="text-2xl font-bold mb-4 text-asu-maroon">Progress & Achievements</h2>
               <p className="mb-4 text-gray-600 dark:text-gray-300">
                 Track your wellness journey and unlock achievements
@@ -621,7 +643,7 @@ const App: React.FC = () => {
                 <AchievementsTracker achievements={achievements} isDarkMode={isDarkMode} />
               </div>
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="resources-card">
               <h3 className="text-xl font-bold mb-4 text-asu-maroon">Wellness Calendar</h3>
               <div className="flex items-center mb-4">
                 <FaRegCalendarAlt className="text-asu-maroon mr-2" />
@@ -650,7 +672,7 @@ const App: React.FC = () => {
       case 'resources':
         return (
           <div className="space-y-6">
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="resources-card">
               <h2 className="text-2xl font-bold mb-4 text-asu-maroon">ASU Resources Hub</h2>
               <p className="mb-4 text-gray-600 dark:text-gray-300">
                 Connect with ASU wellness and mental health resources
@@ -660,15 +682,15 @@ const App: React.FC = () => {
             
             {/* Mental Health Chatbot moved to Home tab */}
             
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="resources-card">
               <h3 className="text-xl font-bold mb-4 text-asu-maroon">Campus Soundscapes</h3>
               <CampusSoundscapes isDarkMode={isDarkMode} />
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="resources-card">
               <h3 className="text-xl font-bold mb-4 text-asu-maroon">Professor Wisdom</h3>
               <ProfessorWisdom isDarkMode={isDarkMode} />
             </div>
-            <div className="p-6 rounded-xl bg-white shadow-lg dark:bg-gray-800">
+            <div className="resources-card">
               <h3 className="text-xl font-bold mb-4 text-asu-maroon">Wellness Pods</h3>
               <WellnessPods isDarkMode={isDarkMode} />
             </div>
@@ -723,41 +745,39 @@ const App: React.FC = () => {
       </div>
 
       {/* Header with improved styling */}
-      <header className={`p-5 shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white bg-opacity-90'} relative`} style={{ zIndex: 10 }}>
+      <header className="app-header p-5 relative" style={{ zIndex: 10 }}>
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-asu-maroon to-asu-gold flex items-center justify-center shadow-md">
-                <FaBrain className="text-5xl text-white" />
+              <div className="w-16 h-16 rounded-full bg-asu-gold flex items-center justify-center shadow-md">
+                <FaBrain className="text-5xl text-asu-maroon" />
               </div>
-              <span className="absolute -bottom-1 -right-1 bg-asu-gold text-asu-maroon text-sm font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-white">{level}</span>
+              <span className="absolute -bottom-1 -right-1 bg-white text-asu-maroon text-sm font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-sm border-2 border-asu-gold">{level}</span>
             </div>
-            <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-asu-maroon to-asu-gold">ASU Wellness Warrior</h1>
+            <h1 style={{ color: '#FFC627' }} className="text-3xl font-extrabold">ASU Wellness Warrior</h1>
           </div>
           <div className="flex items-center space-x-4">
             <motion.div 
-              className="flex items-center space-x-2 bg-gradient-to-r from-asu-cream to-asu-gold bg-opacity-90 py-2 px-4 rounded-full shadow-md"
+              className="flex items-center space-x-2 bg-white/20 py-2 px-4 rounded-full shadow-md"
               whileHover={{ scale: 1.05 }}
             >
-              <FaStar className="text-asu-maroon text-xl" />
-              <span className="font-bold text-lg text-asu-maroon">{points} pts</span>
+              <FaStar className="text-asu-gold text-xl" />
+              <span className="font-bold text-lg text-white">{points} pts</span>
             </motion.div>
             <motion.div 
-              className="flex items-center space-x-2 bg-gradient-to-r from-asu-maroon to-asu-gold py-2 px-4 rounded-full shadow-md"
+              className="flex items-center space-x-2 bg-asu-gold py-2 px-4 rounded-full shadow-md"
               whileHover={{ scale: 1.05 }}
             >
-              <FaHeart className="text-white text-xl" />
-              <span className="font-bold text-lg text-white">{streak.current} day streak</span>
+              <FaHeart className="text-asu-maroon text-xl" />
+              <span className="font-bold text-lg text-asu-maroon">{streak.current} day streak</span>
             </motion.div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-3 rounded-full shadow-md ${
-                isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
-              }`}
+              className="p-3 rounded-full shadow-md bg-white/20"
             >
-              {isDarkMode ? <FaSun className="text-asu-gold text-xl" /> : <FaMoon className="text-asu-maroon text-xl" />}
+              {isDarkMode ? <FaSun className="text-asu-gold text-xl" /> : <FaMoon className="text-white text-xl" />}
             </motion.button>
           </div>
         </div>
@@ -773,16 +793,14 @@ const App: React.FC = () => {
             { id: 'map', icon: <FaMapMarkedAlt className="mr-2 text-xl" />, label: 'Campus Map' },
             { id: 'progress', icon: <FaTrophy className="mr-2 text-xl" />, label: 'Progress' },
             { id: 'resources', icon: <FaBook className="mr-2 text-xl" />, label: 'Resources' }
-          ].map(tab => (
+          ].map((tab, index) => (
             <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-5 py-3 rounded-full whitespace-nowrap flex items-center text-lg ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-asu-maroon to-asu-gold text-white'
-                  : isDarkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-white hover:bg-gray-50 text-asu-gray shadow-md'
+                  ? 'bg-gradient-to-r from-asu-maroon to-soft-teal text-white shadow-lg'
+                  : 'bg-white bg-opacity-70 backdrop-filter backdrop-blur-sm text-asu-maroon shadow-md border border-white border-opacity-50'
               } transition-all duration-300 ease-in-out`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

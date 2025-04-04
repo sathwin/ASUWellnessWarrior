@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --lavender-mist: #E6E6FA;
+  --pastel-blue: #A7C7E7;
+  --pastel-gold: #FFEBAD;
+  --asu-maroon: #8C1D40;
+  --asu-gold: #FFC627;
+  --soft-bg: #f8f4ff;
+  --card-bg: rgba(255, 255, 255, 0.85);
+}
+
 @layer base {
   html {
     font-size: 18px; /* Increase base font size */
@@ -9,10 +19,12 @@
   
   body {
     @apply antialiased;
+    background-color: var(--lavender-mist);
   }
   
   h1 {
     @apply text-3xl font-bold;
+    color: var(--asu-gold);
   }
   
   h2 {
@@ -34,11 +46,135 @@
   }
   
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-lg;
+    @apply px-4 py-2 bg-pastel-blue text-asu-maroon rounded-lg hover:opacity-90 transition-colors text-lg;
   }
   
   .card {
     @apply p-4 rounded-lg shadow-lg;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+  }
+  
+  .chat-bubble-user {
+    @apply p-4 rounded-2xl max-w-[80%] shadow-md;
+    background: var(--asu-maroon);
+    color: white;
+    white-space: pre-wrap;
+  }
+  
+  .chat-bubble-bot {
+    @apply p-4 rounded-2xl max-w-[80%] shadow-md;
+    background: var(--pastel-blue);
+    color: var(--asu-maroon);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
+  .app-header {
+    background: var(--asu-maroon);
+    @apply shadow-xl;
+  }
+  
+  .app-header-text {
+    color: var(--asu-gold);
+    @apply font-bold;
+  }
+  
+  .chat-container {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    @apply rounded-xl p-6 shadow-lg;
+  }
+  
+  .chat-input {
+    @apply w-full p-4 rounded-full border text-base focus:ring-2 transition-all;
+    border-color: var(--asu-maroon);
+    background: white;
+  }
+  
+  .chat-input:focus {
+    box-shadow: 0 0 0 2px rgba(140, 29, 64, 0.3);
+  }
+  
+  .send-button {
+    @apply p-4 rounded-full flex items-center justify-center shadow-md;
+    background: var(--asu-maroon);
+    color: white;
+  }
+  
+  .quick-option {
+    @apply px-5 py-3 rounded-full text-sm font-medium shadow-sm flex items-center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--asu-maroon);
+    color: var(--asu-maroon);
+    transition: all 0.2s ease;
+  }
+  
+  .quick-option:hover {
+    background: var(--asu-maroon);
+    color: white;
+  }
+  
+  .quick-option-alt {
+    @apply px-5 py-3 rounded-full text-sm font-medium shadow-sm flex items-center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--asu-gold);
+    color: var(--asu-maroon);
+    transition: all 0.2s ease;
+  }
+  
+  .quick-option-alt:hover {
+    background: var(--asu-gold);
+    color: var(--asu-maroon);
+  }
+  
+  .chat-avatar {
+    @apply w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center shadow-md;
+  }
+  
+  .chat-avatar-bot {
+    background: var(--pastel-blue);
+    color: var(--asu-maroon);
+  }
+  
+  .chat-avatar-user {
+    background: var(--asu-maroon);
+    color: white;
+  }
+  
+  .chat-timestamp {
+    @apply text-xs opacity-70;
+  }
+  
+  .chat-title {
+    @apply text-2xl font-bold;
+    color: var(--asu-maroon);
+  }
+  
+  .chat-subtitle {
+    @apply text-sm;
+    color: #666;
+  }
+  
+  /* Content card backgrounds */
+  .content-card {
+    background: var(--card-bg);
+    @apply p-6 rounded-xl shadow-lg;
+  }
+  
+  /* Add subtle background to white areas */
+  .resources-card {
+    background-color: var(--soft-bg);
+    @apply p-6 rounded-xl shadow-lg;
+  }
+  
+  .wellness-panel {
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.9), rgba(231, 222, 255, 0.9));
+    @apply p-6 rounded-xl shadow-lg;
   }
 }
 
