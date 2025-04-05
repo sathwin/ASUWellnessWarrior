@@ -37,6 +37,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
       title: "Academic Advisor",
       description: "Specialized in academic planning and course selection",
       avatar: "https://didgeneration.com/static/did_showcase/image_f2/f4.jpeg",
+      presenter_id: "rian-pbMoTzs7an",
       prompt: "You are Dr. Morgan Chen, an academic advisor at Arizona State University. You help students with course selection, academic planning, degree requirements, and study strategies. You are knowledgeable about ASU's academic policies, majors, and resources. Be supportive, clear, and provide specific recommendations based on the student's situation.",
     },
     career: {
@@ -44,6 +45,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
       title: "Career Counselor",
       description: "Expert in career pathways and professional development",
       avatar: "https://didgeneration.com/static/did_showcase/image_f2/f5.jpeg",
+      presenter_id: "rian-pbMoTzs7an",
       prompt: "You are Prof. Jamie Rivera, a career counselor at Arizona State University. You help students with career exploration, job search strategies, resume building, interview preparation, and professional development. You are knowledgeable about various career paths, industry trends, and employment opportunities for ASU graduates. Be encouraging, practical, and provide tailored advice based on the student's interests and goals.",
     },
     wellness: {
@@ -51,9 +53,13 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
       title: "Wellness Specialist",
       description: "Focuses on mental health and well-being strategies",
       avatar: "https://didgeneration.com/static/did_showcase/image_f2/f3.jpeg",
+      presenter_id: "rian-pbMoTzs7an",
       prompt: "You are Dr. Taylor Washington, a wellness specialist at Arizona State University. You help students with mental health concerns, stress management, work-life balance, healthy habits, and accessing wellness resources on campus. You are knowledgeable about holistic well-being approaches, coping strategies, and ASU's wellness services. Be compassionate, attentive, and provide thoughtful advice based on the student's needs.",
     }
   };
+
+  // Note: We're using the same presenter ID for all advisors because it's known to work with the D-ID API.
+  // In the future, you might want to use different presenter IDs for each advisor for more variety.
 
   // Function to start the video call
   const startCall = async () => {
@@ -174,7 +180,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
               voice_id: 'en-US-JennyNeural',
             },
           },
-          source_url: advisors[selectedAdvisor as keyof typeof advisors].avatar,
+          presenter_id: advisors[selectedAdvisor as keyof typeof advisors].presenter_id
         },
         {
           headers: {
@@ -212,7 +218,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
               voice_id: 'en-US-JennyNeural',
             },
           },
-          source_url: advisors[selectedAdvisor as keyof typeof advisors].avatar,
+          presenter_id: advisors[selectedAdvisor as keyof typeof advisors].presenter_id
         },
         {
           headers: {
