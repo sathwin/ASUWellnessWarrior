@@ -178,7 +178,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${didApiKey}`,
+            'Authorization': `Basic ${didApiKey}`,
             'Content-Type': 'application/json',
           },
         }
@@ -216,7 +216,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${didApiKey}`,
+            'Authorization': `Basic ${didApiKey}`,
             'Content-Type': 'application/json',
           },
         }
@@ -241,7 +241,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
       try {
         const response = await axios.get(`https://api.d-id.com/talks/${talkId}`, {
           headers: {
-            'Authorization': `Bearer ${didApiKey}`,
+            'Authorization': `Basic ${didApiKey}`,
             'Content-Type': 'application/json',
           },
         });

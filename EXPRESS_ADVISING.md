@@ -104,7 +104,8 @@ The ExpressAdvising component is optimized to use short, concise responses to ma
    - Ensure you have sufficient quota remaining on your D-ID account
 
 3. **"Authorization" errors in console**:
-   - Make sure you're using the correct authentication format (Bearer token)
+   - Make sure you're using the correct authentication format (Basic authentication)
+   - The D-ID API key should be in the format username:password
    - Check that your D-ID API key is correct and has the proper permissions
 
 For any other issues, consult the [D-ID API documentation](https://docs.d-id.com/). 
