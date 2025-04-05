@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaSun, FaMoon, FaBrain, FaHeart, FaStar, FaGamepad, FaMapMarkedAlt, FaTrophy, FaBook, FaMicrophone, FaRegCalendarAlt, FaRobot, FaPaperPlane, FaUser, FaKeyboard } from 'react-icons/fa';
+import { FaSun, FaMoon, FaBrain, FaHeart, FaStar, FaGamepad, FaMapMarkedAlt, FaTrophy, FaBook, FaMicrophone, FaRegCalendarAlt, FaRobot, FaPaperPlane, FaUser, FaKeyboard, FaVideo } from 'react-icons/fa';
 import WellnessWarrior from './components/WellnessWarrior';
 import MemoryGame from './components/games/MemoryGame';
 import ResourceMatchmaker from './components/ResourceMatchmaker';
@@ -13,6 +13,7 @@ import WellnessMap from './components/WellnessMap';
 import AchievementsTracker from './components/AchievementsTracker';
 import ResourcesHub from './components/ResourcesHub';
 import MicroInterventions from './components/MicroInterventions';
+import ExpressAdvising from './components/ExpressAdvising';
 import OpenAI from 'openai';
 
 interface Streak {
@@ -696,6 +697,18 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      case 'advising':
+        return (
+          <div className="space-y-6">
+            <div className="content-card">
+              <h2 className="text-2xl font-bold mb-4 text-asu-maroon">Express Advising</h2>
+              <p className="mb-4 text-gray-600 dark:text-gray-300">
+                Get personalized advice and support for your wellness journey
+              </p>
+              <ExpressAdvising isDarkMode={isDarkMode} />
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -792,7 +805,8 @@ const App: React.FC = () => {
             { id: 'games', icon: <FaGamepad className="mr-2 text-xl" />, label: 'Brain Games' },
             { id: 'map', icon: <FaMapMarkedAlt className="mr-2 text-xl" />, label: 'Campus Map' },
             { id: 'progress', icon: <FaTrophy className="mr-2 text-xl" />, label: 'Progress' },
-            { id: 'resources', icon: <FaBook className="mr-2 text-xl" />, label: 'Resources' }
+            { id: 'resources', icon: <FaBook className="mr-2 text-xl" />, label: 'Resources' },
+            { id: 'advising', icon: <FaVideo className="mr-2 text-xl" />, label: 'Express Advising' }
           ].map((tab, index) => (
             <motion.button
               key={tab.id}
