@@ -38,8 +38,8 @@ interface Achievement {
 }
 
 // Add OpenAI API configuration
-// Using fallback API key because process.env variables might not work in Create React App without custom setup
-const OPENAI_API_KEY = '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'; // Replace with your actual API key here
+// Use environment variable to securely store API key
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 console.log("API Key configured:", OPENAI_API_KEY ? "API key is set" : "API key is missing");
 
 // Initialize OpenAI client
