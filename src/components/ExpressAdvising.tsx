@@ -1,9 +1,50 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaVideo, FaMicrophone, FaPhoneSlash, FaUser, FaComment, FaCog } from 'react-icons/fa';
+import { FaVideo, FaMicrophone, FaPhoneSlash, FaUser, FaComment, FaHeart, FaMicrophoneSlash } from 'react-icons/fa';
 import OpenAI from 'openai';
 import Webcam from 'react-webcam';
 import axios from 'axios';
+
+// Define SpeechRecognition types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  readonly isFinal: boolean;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onend: () => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+}
+
+interface Window {
+  SpeechRecognition?: new () => SpeechRecognition;
+  webkitSpeechRecognition?: new () => SpeechRecognition;
+}
 
 interface ExpressAdvisingProps {
   isDarkMode: boolean;
@@ -16,14 +57,14 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
   const [conversation, setConversation] = useState<{text: string, isUser: boolean, timestamp: Date}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [advisorUrl, setAdvisorUrl] = useState<string | null>(null);
-  const [selectedAdvisor, setSelectedAdvisor] = useState('academic');
+  const [isListening, setIsListening] = useState(false);
   
   const webcamRef = useRef<Webcam>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // API keys (using environment variables)
   const openaiApiKey = process.env.REACT_APP_OPENAI_API_KEY;
-  const didApiKey = process.env.REACT_APP_DID_API_KEY; // You'll need to add this to your .env file
+  const didApiKey = process.env.REACT_APP_DID_API_KEY;
   
   // Initialize OpenAI client
   const openai = new OpenAI({
@@ -31,35 +72,15 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
     dangerouslyAllowBrowser: true
   });
 
-  const advisors = {
-    academic: {
-      name: "Dr. Morgan Chen",
-      title: "Academic Advisor",
-      description: "Specialized in academic planning and course selection",
-      avatar: "https://didgeneration.com/static/did_showcase/image_f2/f4.jpeg",
-      presenter_id: "rian-pbMoTzs7an",
-      prompt: "You are Dr. Morgan Chen, an academic advisor at Arizona State University. You help students with course selection, academic planning, degree requirements, and study strategies. You are knowledgeable about ASU's academic policies, majors, and resources. Be supportive, clear, and provide specific recommendations based on the student's situation.",
-    },
-    career: {
-      name: "Prof. Jamie Rivera",
-      title: "Career Counselor",
-      description: "Expert in career pathways and professional development",
-      avatar: "https://didgeneration.com/static/did_showcase/image_f2/f5.jpeg",
-      presenter_id: "rian-pbMoTzs7an",
-      prompt: "You are Prof. Jamie Rivera, a career counselor at Arizona State University. You help students with career exploration, job search strategies, resume building, interview preparation, and professional development. You are knowledgeable about various career paths, industry trends, and employment opportunities for ASU graduates. Be encouraging, practical, and provide tailored advice based on the student's interests and goals.",
-    },
-    wellness: {
-      name: "Dr. Taylor Washington",
-      title: "Wellness Specialist",
-      description: "Focuses on mental health and well-being strategies",
-      avatar: "https://didgeneration.com/static/did_showcase/image_f2/f3.jpeg",
-      presenter_id: "rian-pbMoTzs7an",
-      prompt: "You are Dr. Taylor Washington, a wellness specialist at Arizona State University. You help students with mental health concerns, stress management, work-life balance, healthy habits, and accessing wellness resources on campus. You are knowledgeable about holistic well-being approaches, coping strategies, and ASU's wellness services. Be compassionate, attentive, and provide thoughtful advice based on the student's needs.",
-    }
+  // Simplified to just one mental health advisor
+  const advisor = {
+    name: "Taylor Washington",
+    title: "Mental Health Specialist",
+    description: "Expert in student mental health support, stress management, and well-being strategies",
+    avatar: "https://randomuser.me/api/portraits/women/65.jpg",
+    presenter_id: "rian-pbMoTzs7an", // Using the known working presenter ID
+    prompt: "You are Taylor, a mental health specialist at Arizona State University. Your expertise is helping students with anxiety, depression, stress management, work-life balance, and accessing campus mental health resources. Be compassionate, attentive, and provide practical advice for common student mental health concerns. Suggest specific ASU resources when appropriate. Maintain a supportive and non-judgmental tone. Your primary goal is to help students feel heard and to connect them with appropriate mental health support.",
   };
-
-  // Note: We're using the same presenter ID for all advisors because it's known to work with the D-ID API.
-  // In the future, you might want to use different presenter IDs for each advisor for more variety.
 
   // Function to start the video call
   const startCall = async () => {
@@ -67,7 +88,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
     
     // Add initial welcome message
     const initialMessage = {
-      text: `Hello, I'm ${advisors[selectedAdvisor as keyof typeof advisors].name}, your ${advisors[selectedAdvisor as keyof typeof advisors].title}. How can I help you today?`,
+      text: `Hello, I'm ${advisor.name}, your ${advisor.title}. I'm here to help with any mental health concerns or questions you might have. How are you feeling today?`,
       isUser: false,
       timestamp: new Date()
     };
@@ -94,6 +115,45 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
     setIsMuted(!isMuted);
   };
 
+  // Function to handle voice input
+  const toggleListening = () => {
+    if (!isListening) {
+      setIsListening(true);
+      
+      // Create a new SpeechRecognition instance
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech recognition is not supported in your browser");
+        setIsListening(false);
+        return;
+      }
+      
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[0][0].transcript;
+        setMessage(transcript);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+      
+      recognition.start();
+    } else {
+      setIsListening(false);
+      // If there is an active recognition instance, it would need to be stopped here
+    }
+  };
+
   // Function to send a message
   const sendMessage = async () => {
     if (message.trim() === '') return;
@@ -116,7 +176,7 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
         messages: [
           {
             role: "system" as const,
-            content: advisors[selectedAdvisor as keyof typeof advisors].prompt
+            content: advisor.prompt
           },
           ...conversation.map(msg => ({
             role: msg.isUser ? "user" as const : "assistant" as const,
@@ -177,10 +237,10 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
             input: text,
             provider: {
               type: 'microsoft',
-              voice_id: 'en-US-JennyNeural',
+              voice_id: 'en-US-JennyNeural', // Female voice for the mental health advisor
             },
           },
-          presenter_id: advisors[selectedAdvisor as keyof typeof advisors].presenter_id
+          presenter_id: advisor.presenter_id
         },
         {
           headers: {
@@ -215,10 +275,10 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
             input: text,
             provider: {
               type: 'microsoft',
-              voice_id: 'en-US-JennyNeural',
+              voice_id: 'en-US-JennyNeural', // Female voice for the mental health advisor
             },
           },
-          presenter_id: advisors[selectedAdvisor as keyof typeof advisors].presenter_id
+          presenter_id: advisor.presenter_id
         },
         {
           headers: {
@@ -253,9 +313,13 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
         });
 
         if (response.data.status === 'done') {
-          setAdvisorUrl(response.data.result_url);
-          if (videoRef.current) {
-            videoRef.current.load();
+          // Only update if the new URL is different from the current one
+          if (response.data.result_url !== advisorUrl) {
+            setAdvisorUrl(response.data.result_url);
+            if (videoRef.current) {
+              videoRef.current.load();
+              videoRef.current.play().catch(err => console.error('Error playing video:', err));
+            }
           }
           return;
         }
@@ -278,33 +342,11 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
     sendMessage();
   };
 
-  // Play the video when advisorUrl changes
-  useEffect(() => {
-    if (advisorUrl && videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.play().catch(err => console.error('Error playing video:', err));
-    }
-  }, [advisorUrl]);
-
   return (
     <div className={`w-full h-full rounded-lg overflow-hidden ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
       {/* Header */}
       <div className={`p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-asu-maroon text-white'} flex items-center justify-between`}>
-        <h2 className="text-xl font-bold">Express Advising</h2>
-        
-        {!isCallActive && (
-          <div className="flex space-x-4">
-            <select 
-              className={`rounded-md p-2 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'}`}
-              value={selectedAdvisor}
-              onChange={(e) => setSelectedAdvisor(e.target.value)}
-            >
-              <option value="academic">Academic Advisor</option>
-              <option value="career">Career Counselor</option>
-              <option value="wellness">Wellness Specialist</option>
-            </select>
-          </div>
-        )}
+        <h2 className="text-xl font-bold">Mental Health Support</h2>
       </div>
       
       {!isCallActive ? (
@@ -312,14 +354,14 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
           {/* Advisor Information */}
           <div className={`mb-8 p-6 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} max-w-md text-center`}>
             <img
-              src={advisors[selectedAdvisor as keyof typeof advisors].avatar}
-              alt={advisors[selectedAdvisor as keyof typeof advisors].name}
+              src={advisor.avatar}
+              alt={advisor.name}
               className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
             />
-            <h3 className="text-xl font-bold">{advisors[selectedAdvisor as keyof typeof advisors].name}</h3>
-            <p className="text-lg font-semibold">{advisors[selectedAdvisor as keyof typeof advisors].title}</p>
+            <h3 className="text-xl font-bold">{advisor.name}</h3>
+            <p className="text-lg font-semibold">{advisor.title}</p>
             <p className={`mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              {advisors[selectedAdvisor as keyof typeof advisors].description}
+              {advisor.description}
             </p>
           </div>
           
@@ -330,13 +372,32 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
             whileTap={{ scale: 0.95 }}
             onClick={startCall}
           >
-            <FaVideo className="mr-2" /> Start Video Consultation
+            <FaVideo className="mr-2" /> Start Mental Health Consultation
           </motion.button>
           
           <p className={`mt-6 text-center max-w-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Connect with an AI-powered advisor for personalized guidance. Our advisors can help with academic planning, 
-            career decisions, and wellness strategies.
+            Connect with our AI-powered mental health specialist for personalized support.
+            Get help with stress management, anxiety, depression, and learn about available campus resources.
+            All conversations are private and confidential.
           </p>
+          
+          {/* Quick Topics */}
+          <div className="mt-8">
+            <h4 className="text-center font-semibold mb-3">Common Topics:</h4>
+            <div className="flex flex-wrap justify-center gap-2">
+              {["Stress Management", "Anxiety", "Depression", "Academic Pressure", 
+                "Sleep Issues", "Campus Resources"].map((topic, index) => (
+                <motion.div
+                  key={index}
+                  className={`px-3 py-1 rounded-full text-sm ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} flex items-center`}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <FaHeart className="mr-1 text-asu-maroon" size={12} />
+                  {topic}
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 h-[80vh]">
@@ -455,11 +516,21 @@ const ExpressAdvising: React.FC<ExpressAdvisingProps> = ({ isDarkMode }) => {
                   disabled={isLoading}
                 />
                 <motion.button
+                  type="button"
+                  className={`p-2 rounded-lg ${isListening ? 'bg-red-500' : 'bg-asu-gold'} text-white`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleListening}
+                  disabled={isLoading}
+                >
+                  {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                </motion.button>
+                <motion.button
                   type="submit"
                   className="p-2 rounded-lg bg-asu-maroon text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  disabled={isLoading}
+                  disabled={isLoading || message.trim() === ''}
                 >
                   <FaComment />
                 </motion.button>
